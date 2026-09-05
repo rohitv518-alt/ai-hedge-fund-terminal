@@ -1,10 +1,24 @@
-import MetaTrader5 as mt5
 import pandas as pd
 
-from config import MT5_LOGIN, MT5_PASSWORD, MT5_PATH, MT5_SERVER
+# MT5 (MetaTrader 5) Linux/Cloud par available nahi hota, isliye conditional import handling
+try:
+    import MetaTrader5 as mt5
+
+    MT5_AVAILABLE = True
+except ImportError:
+    MT5_AVAILABLE = False
 
 
 def initialize_mt5():
+    if not MT5_AVAILABLE:
+        return False
+
+    # Attempt importing config dynamically for local Windows setup
+    try:
+        from config import MT5_LOGIN, MT5_PASSWORD, MT5_PATH, MT5_SERVER
+    except ImportError:
+        return False
+
     # Force shutdown previous stale/hanging connections
     mt5.shutdown()
 
@@ -24,8 +38,22 @@ def initialize_mt5():
     return True
 
 
-def get_market_data(symbol):
-    # Step 1: Ensure MT5 connection is active
+def get_market_data(symbol="GOLD"):
+    # Streamlit Cloud (Linux) Fallback Data Generation
+    if not MT5_AVAILABLE:
+        return (
+            f"=== Streamlit Cloud Mock Data for {symbol} ===\n\n"
+            "4-Hour Timeframe:\n"
+            "time                 open     high      low    close\n"
+            "2026-03-30 08:00:00  2165.20  2170.10  2162.00  2168.50\n"
+            "2026-03-30 12:00:00  2168.50  2175.40  2166.30  2172.10\n\n"
+            "15-Minute Timeframe:\n"
+            "time                 open     high      low    close\n"
+            "2026-03-30 14:15:00  2171.00  2173.20  2170.50  2172.80\n"
+            "2026-03-30 14:30:00  2172.80  2174.00  2171.20  2173.50\n"
+        )
+
+    # Local Windows Environment MT5 Fetching Logic
     initialize_mt5()
 
     # Step 2: Ensure symbol is selected & visible in Market Watch
