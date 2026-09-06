@@ -27,7 +27,7 @@ def get_ai_decision(market_data_string):
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",  # Updated supported Groq model
+            model="openai/gpt-oss-20b",  # Updated supported Groq model
             messages=[
                 {
                     "role": "system",
