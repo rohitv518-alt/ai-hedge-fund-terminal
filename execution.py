@@ -1,13 +1,35 @@
-import MetaTrader5 as mt5
-from config import MT5_LOGIN, MT5_PASSWORD, MT5_PATH, MT5_SERVER
+import os
+
+# Streamlit Cloud (Linux) par MetaTrader5 module available nahi hota.
+# Conditional import and OS checking to prevent cloud deployment crashes.
+try:
+    import MetaTrader5 as mt5
+
+    MT5_AVAILABLE = True
+except ImportError:
+    MT5_AVAILABLE = False
 
 
 def execute_trade(symbol, decision, lot_size=0.01):
+    # Decision validation checks
     if decision == "HOLD":
         return "HOLD: No trade executed."
 
     if decision not in ("BUY", "SELL"):
         return f"ERROR: Invalid decision '{decision}'."
+
+    # Streamlit Cloud Fallback Logic (Simulation Mode)
+    if not MT5_AVAILABLE:
+        return (
+            f"SIMULATED SUCCESS (Cloud Mode): '{decision}' signal logged for {symbol} "
+            f"(Lot: {lot_size}). Live execution requires running on local Windows MT5."
+        )
+
+    # Local Windows MT5 Execution Logic
+    try:
+        from config import MT5_LOGIN, MT5_PASSWORD, MT5_PATH, MT5_SERVER
+    except ImportError:
+        return "ERROR: 'config.py' missing or invalid configuration."
 
     # 1. Initialize Connection explicitly before trade execution
     mt5.shutdown()
@@ -20,9 +42,9 @@ def execute_trade(symbol, decision, lot_size=0.01):
         return f"ERROR: MT5 execution connection failed: {mt5.last_error()}"
 
     try:
-        # 2. Force Symbol Selection in Market Watch (Fixes 'Symbol not found' issue)
+        # 2. Force Symbol Selection in Market Watch
         if not mt5.symbol_select(symbol, True):
-            return f"ERROR: Symbol '{symbol}' not found in Market Watch or XM Server."
+            return f"ERROR: Symbol '{symbol}' not found in Market Watch or Broker Server."
 
         symbol_info = mt5.symbol_info(symbol)
         if symbol_info is None:
@@ -71,6 +93,9 @@ def execute_trade(symbol, decision, lot_size=0.01):
             f"SUCCESS: {decision} order executed for {symbol}, "
             f"lot size={lot_size}, price={result.price}"
         )
+
+    except Exception as e:
+        return f"ERROR: Trade execution failed with exception: {str(e)}"
 
     finally:
         # Safe disconnect after trade completion
